@@ -8,6 +8,7 @@ For more information about Gemini Batch Mode, see the official documentation.
 
 ## Features
 
+- **Job Management**: Complete lifecycle management from submission to result retrieval
 - **Submit**: Upload JSONL files and create Gemini batch jobs with model selection
 - **Poll**: Monitor job progress with real-time TUI and auto-download results
 - **Resume**: Interrupt-safe job tracking with persistent state
