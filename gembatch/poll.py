@@ -9,111 +9,161 @@ import sys
 import time
 import argparse
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from google import genai
 from rich.live import Live
 from rich.table import Table
+from rich.columns import Columns
+from rich.align import Align
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+from gembatch.batch_info import batch_to_dict
 
 POLL_INTERVAL = 30  # Poll every 30 seconds
 
 console = Console()
 
 
-def create_job_status_display(jobs, last_update, countdown=None):
-    """Create a table display for job status"""
-    table = Table(title="Batch Job Monitor")
-    table.add_column("File", style="cyan")
-    table.add_column("Status", style="magenta")
-    table.add_column("Created", style="dim")
-    table.add_column("Completed", style="green")
-    table.add_column("Duration", style="yellow")
+def to_local_time(iso_time_str):
+    """Convert ISO time string to local time string"""
+    if not iso_time_str:
+        return ""
+    try:
+        # Parse ISO format and convert to local time
+        dt = datetime.fromisoformat(iso_time_str.replace('Z', '+00:00'))
+        local_dt = dt.astimezone()
+        return local_dt.strftime('%Y-%m-%d %H:%M:%S')
+    except Exception:
+        return iso_time_str[:19].replace('T', ' ')
+
+
+class JobStatusDisplay:
+    """Updatable job status display"""
+    def __init__(self, jobs, last_update):
+        self.jobs = jobs
+        self.last_update = last_update
+        self.summary_text = Text()
+        self.last_update_text = Text(f"Last update: {last_update}", style="dim")
+        self._build_display()
     
-    completed_count = 0
-    for job in jobs:
-        input_file = job['input_file']
+    def _build_display(self):
+        # Build table
+        self.table = Table(title="Batch Job Monitor")
+        self.table.add_column("Input File", style="cyan")
+        self.table.add_column("State", style="magenta")
+        self.table.add_column("Create Time", style="dim")
+        self.table.add_column("End Time", style="green")
+        self.table.add_column("Duration", style="yellow")
         
-        if 'completed_at' in job:
-            completed_count += 1
-            final_state = job.get('final_state', '')
-            if final_state == 'JOB_STATE_SUCCEEDED':
-                status = "✓ Success"
-                status_style = "green"
-            elif final_state == 'JOB_STATE_FAILED':
-                status = "✗ Failed"
-                status_style = "red"
-            elif final_state == 'JOB_STATE_CANCELLED':
-                status = "⊘ Cancelled"
-                status_style = "orange1"
+        completed_count = 0
+        for job in self.jobs:
+            input_file = job['input_file']
+            batch = job['batch']
+            batch_state = batch.get('state', '')
+            
+            if batch_state in ['JOB_STATE_SUCCEEDED', 'JOB_STATE_FAILED', 'JOB_STATE_CANCELLED']:
+                completed_count += 1
+                if batch_state == 'JOB_STATE_SUCCEEDED':
+                    status = "✓ Success"
+                    status_style = "green"
+                elif batch_state == 'JOB_STATE_FAILED':
+                    status = "✗ Failed"
+                    status_style = "red"
+                elif batch_state == 'JOB_STATE_CANCELLED':
+                    status = "⊘ Cancelled"
+                    status_style = "orange1"
+                else:
+                    status = "✓ Completed"
+                    status_style = "green"
             else:
-                # For backward compatibility
-                status = "✓ Completed"
-                status_style = "green"
-        else:
-            status = "⏳ Running"
-            status_style = "yellow"
+                status = "⏳ Running"
+                status_style = "yellow"
+            
+            # Extract times from batch object and convert to local time
+            create_time = batch.get('create_time', '')
+            end_time = batch.get('end_time', '')
+            created_at = to_local_time(create_time)
+            completed_at = to_local_time(end_time)
+            
+            # Calculate duration from create_time and end_time
+            duration_display = ""
+            if create_time and end_time:
+                try:
+                    create_dt = datetime.fromisoformat(create_time.replace('Z', '+00:00'))
+                    end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                    duration = end_dt - create_dt
+                    duration_sec = int(duration.total_seconds())
+                    
+                    hours = duration_sec // 3600
+                    minutes = (duration_sec % 3600) // 60
+                    seconds = duration_sec % 60
+                    if hours > 0:
+                        duration_display = f"{hours}h {minutes}m {seconds}s"
+                    elif minutes > 0:
+                        duration_display = f"{minutes}m {seconds}s"
+                    else:
+                        duration_display = f"{seconds}s"
+                except Exception:
+                    duration_display = ""
+            
+            self.table.add_row(
+                input_file,
+                Text(status, style=status_style),
+                created_at,
+                completed_at,
+                duration_display
+            )
         
-        created_at = job.get('created_at', '')[:19].replace('T', ' ')
-        completed_at = job.get('completed_at', '')[:19].replace('T', ' ') if 'completed_at' in job else ''
+        # Build summary
+        total_jobs = len(self.jobs)
+        self.pending_jobs = total_jobs - completed_count
+        self._update_summary()
+    
+    def _update_summary(self, countdown=None):
+        total_jobs = len(self.jobs)
+        completed_count = total_jobs - self.pending_jobs
         
-        # Duration display
-        duration_display = ""
-        if 'duration_seconds' in job:
-            duration_sec = job['duration_seconds']
-            hours = duration_sec // 3600
-            minutes = (duration_sec % 3600) // 60
-            seconds = duration_sec % 60
-            if hours > 0:
-                duration_display = f"{hours}h {minutes}m {seconds}s"
-            elif minutes > 0:
-                duration_display = f"{minutes}m {seconds}s"
-            else:
-                duration_display = f"{seconds}s"
+        self.summary_text.plain = ""
+        self.summary_text.append(f"Total jobs: {total_jobs} | ", style="bold")
+        self.summary_text.append(f"Completed: {completed_count} | ", style="green bold")
+        self.summary_text.append(f"Remaining: {self.pending_jobs}", style="yellow bold")
         
-        table.add_row(
-            input_file,
-            Text(status, style=status_style),
-            created_at,
-            completed_at,
-            duration_display
+        if countdown is not None:
+            self.summary_text.append(f" | Next poll: {countdown}s", style="cyan")
+    
+    def update_countdown(self, countdown):
+        """Update only the countdown part"""
+        self._update_summary(countdown)
+    
+    def __rich__(self):
+        content = [
+            self.last_update_text,
+            Text(""),
+            self.summary_text,
+            Text(""),
+            self.table
+        ]
+        
+        if self.pending_jobs == 0:
+            content.append(Text(""))
+            content.append(Text("🎉 All jobs completed!", style="green bold"))
+        
+        
+        return Panel(
+            Align.center(Columns(content, equal=True, expand=True)),
+            title="Gemini Batch Job Monitor",
+            border_style="blue"
         )
-    
-    # Summary information
-    total_jobs = len(jobs)
-    pending_jobs = total_jobs - completed_count
-    
-    summary = Text()
-    summary.append(f"Total jobs: {total_jobs} | ", style="bold")
-    summary.append(f"Completed: {completed_count} | ", style="green bold")
-    summary.append(f"Remaining: {pending_jobs}", style="yellow bold")
-    
+
+
+def create_job_status_display(jobs, last_update, countdown=None):
+    """Create a table display for job status (legacy function)"""
+    display = JobStatusDisplay(jobs, last_update)
     if countdown is not None:
-        summary.append(f" | Next poll: {countdown}s", style="cyan")
-    
-    # Wrap in panel
-    content = [
-        Text(f"Last update: {last_update}", style="dim"),
-        Text(""),
-        summary,
-        Text(""),
-        table
-    ]
-    
-    if pending_jobs == 0:
-        content.append(Text(""))
-        content.append(Text("🎉 All jobs completed!", style="green bold"))
-    
-    from rich.columns import Columns
-    from rich.align import Align
-    
-    return Panel(
-        Align.center(Columns(content, equal=True, expand=True)),
-        title="Gemini Batch Job Monitor",
-        border_style="blue"
-    )
+        display.update_countdown(countdown)
+    return display
 
 
 def load_jobs_from_file(job_info_file):
@@ -142,26 +192,16 @@ def load_jobs_from_file(job_info_file):
 
 def get_pending_jobs(jobs):
     """Get list of incomplete jobs"""
-    return [job for job in jobs if 'completed_at' not in job]
+    pending = []
+    for job in jobs:
+        batch_state = job['batch'].get('state', '')
+        if batch_state not in ['JOB_STATE_SUCCEEDED', 'JOB_STATE_FAILED', 'JOB_STATE_CANCELLED']:
+            pending.append(job)
+    return pending
 
 
-def update_job_completion(job_info_file, jobs, job_index, completed_at_datetime, final_state):
-    """Add completion time, duration, and final state to specified job and update JSONL file"""
-    # Add completion time and final state to the job
-    jobs[job_index]['completed_at'] = completed_at_datetime.isoformat()
-    jobs[job_index]['final_state'] = final_state
-    
-    # Calculate duration
-    if 'created_at' in jobs[job_index]:
-        try:
-            created_time = datetime.fromisoformat(jobs[job_index]['created_at'])
-            duration = completed_at_datetime - created_time
-            jobs[job_index]['duration_seconds'] = int(duration.total_seconds())
-        except Exception:
-            # Skip if datetime parsing fails
-            pass
-    
-    # Write new content to temporary file
+def write_updated_jobs(job_info_file, jobs):
+    """Write updated jobs to JSONL file"""
     temp_file = None
     try:
         with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False, 
@@ -190,8 +230,7 @@ def update_job_completion(job_info_file, jobs, job_index, completed_at_datetime,
 
 def cleanup_job_resources(client, job):
     """Clean up job and file resources"""
-    job_name = job['job_name']
-    input_file_name = job.get('uploaded_file_name')
+    job_name = job['batch']['name']
     
     # Delete batch job
     try:
@@ -199,21 +238,15 @@ def cleanup_job_resources(client, job):
     except Exception:
         # Ignore errors (might already be deleted)
         pass
-    
-    # Delete input file
-    if input_file_name:
-        try:
-            client.files.delete(name=input_file_name)
-        except Exception:
-            # Ignore errors (might already be deleted)
-            pass
 
 
 def download_job_results(client, job, input_file_path):
     """Download job results"""
     try:
+        job_name = job['batch']['name']
+        
         # Get latest job status
-        batch_job = client.batches.get(name=job['job_name'])
+        batch_job = client.batches.get(name=job_name)
         
         if batch_job.state.name != "JOB_STATE_SUCCEEDED":
             return False, f"Job not successful: {batch_job.state.name}"
@@ -255,27 +288,29 @@ def poll_jobs(job_info_file, client):
             pending_jobs = get_pending_jobs(jobs)
             current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
-            if not pending_jobs:
-                live.update(create_job_status_display(jobs, current_time))
-                break
-            
             # Update display
             live.update(create_job_status_display(jobs, current_time))
+            
+            # Exit loop if all jobs are completed
+            if not pending_jobs:
+                break
             
             # Check status of each incomplete job
             newly_completed = 0
             for i, job in enumerate(jobs):
-                if 'completed_at' in job:
-                    continue  # Already completed
+                job_name = job['batch']['name']
+                batch_state = job['batch'].get('state', '')
+                
+                # Skip if already completed
+                if batch_state in ['JOB_STATE_SUCCEEDED', 'JOB_STATE_FAILED', 'JOB_STATE_CANCELLED']:
+                    continue
                 
                 try:
-                    batch_job = client.batches.get(name=job['job_name'])
+                    batch_job = client.batches.get(name=job_name)
                     current_state = batch_job.state.name
                     
                     if current_state != "JOB_STATE_PENDING":
                         # Job completed (success, failure, or cancellation)
-                        completed_at = datetime.now()
-                        
                         if current_state == "JOB_STATE_SUCCEEDED":
                             # Download results
                             success, message = download_job_results(client, job, job['input_file'])
@@ -284,8 +319,11 @@ def poll_jobs(job_info_file, client):
                         # Clean up resources regardless of success/failure
                         cleanup_job_resources(client, job)
                         
-                        # Record completion time and final state
-                        update_job_completion(job_info_file, jobs, i, completed_at, current_state)
+                        # Update job with new batch information
+                        job['batch'] = batch_to_dict(batch_job)
+                        
+                        # Write updated job info
+                        write_updated_jobs(job_info_file, jobs)
                         newly_completed += 1
                     
                 except Exception as e:
@@ -299,8 +337,11 @@ def poll_jobs(job_info_file, client):
             # Wait if there are still incomplete jobs
             remaining = len(get_pending_jobs(load_jobs_from_file(job_info_file)))
             if remaining > 0:
+                # Create display object once
+                display = JobStatusDisplay(jobs, current_time)
                 for countdown in range(POLL_INTERVAL, -1, -1):
-                    live.update(create_job_status_display(jobs, current_time, countdown))
+                    display.update_countdown(countdown)
+                    live.update(display)
                     time.sleep(1)
 
 

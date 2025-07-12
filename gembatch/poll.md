@@ -10,7 +10,7 @@
 ### Integration with JSONL Job Management
 **Problem**: A polling system compatible with submit_batch.py's JSONL format job management was needed, but reference implementation only supported single job JSON format.
 
-**Solution**: Implemented mechanism to read each line of job-info.jsonl individually and determine completion status by presence of `completed_at` field, supporting concurrent management of multiple jobs.
+**Solution**: Implemented mechanism to read each line of job-info.jsonl individually and determine completion status by `batch.state` field in the structured batch object, supporting concurrent management of multiple jobs.
 
 ### Safe JSONL File Update Functionality
 **Problem**: Directly updating job-info.jsonl upon job completion risks file corruption due to interruption or exceptions during writing, with concerns about race conditions during concurrent execution.
@@ -35,7 +35,7 @@
 ### Interruption and Resume Support for Flexibility
 **Problem**: When interruption becomes necessary during long polling operations, re-downloading results from already completed jobs wastes time and resources.
 
-**Solution**: Through persistence of completion state via `completed_at` field, automatically detect only incomplete jobs during re-execution after script interruption. Already completed jobs are skipped for efficient processing resumption.
+**Solution**: Through persistence of completion state via `batch.state` in the structured batch object, automatically detect only incomplete jobs during re-execution after script interruption. Already completed jobs are skipped for efficient processing resumption.
 
 ### Rich TUI Fixed-position Display
 **Problem**: Traditional log output format during long-term polling of 23 jobs creates continuous log flow making current status difficult to grasp, requiring scrolling to check past information.
@@ -45,14 +45,14 @@
 ### Comprehensive Job State Management
 **Problem**: Managing only successful jobs would leave failure and cancellation status unclear, making operational problem analysis and re-execution decisions difficult.
 
-**Solution**: Record `final_state`, `completed_at`, and `duration_seconds` in job-info.jsonl for all termination states (success/failure/cancellation). TUI display also color-codes states (✓ success=green, ✗ failure=red, ⊘ cancellation=orange) for comprehensive management of all job situations.
+**Solution**: Update batch object with complete job information for all termination states (success/failure/cancellation) using `batch_to_dict()`. TUI display extracts state information from `batch.state` and color-codes states (✓ success=green, ✗ failure=red, ⊘ cancellation=orange) for comprehensive management of all job situations.
 
 ### Automatic Processing Time Calculation and Recording
 **Problem**: Understanding each job's processing time for batch processing performance analysis and operational planning is desired, but manual time measurement is difficult and inaccurate.
 
-**Solution**: Automatically calculate duration from `created_at` and `completed_at`, recording as `duration_seconds` in JSONL. TUI display shows in readable "3h 45m 30s" format, enabling processing performance analysis and future processing time prediction.
+**Solution**: Automatically calculate duration from `batch.create_time` and `batch.end_time` extracted from the structured batch object. TUI display shows in readable "3h 45m 30s" format, enabling processing performance analysis and future processing time prediction.
 
 ### Automated Resource Cleanup for Operational Load Reduction
-**Problem**: When Gemini API batch jobs and uploaded input files remain after job completion, API quota pressure and increased management overhead create operational burden.
+**Problem**: When Gemini API batch jobs remain after job completion, API quota pressure and increased management overhead create operational burden.
 
-**Solution**: Automatically delete batch jobs and input files through `cleanup_job_resources` function upon job completion (regardless of success/failure/cancellation). Incorporated safe deletion processing that continues even when exceptions occur, eliminating need for manual cleanup work by operators.
+**Solution**: Automatically delete batch jobs through `cleanup_job_resources` function upon job completion (regardless of success/failure/cancellation). Job names are extracted from `batch.name` in the structured batch object. Incorporated safe deletion processing that continues even when exceptions occur, eliminating need for manual cleanup work by operators.

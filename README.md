@@ -113,11 +113,11 @@ your-project/
 
 ## Job Info Format
 
-The `job-info.jsonl` file tracks job status:
+The `job-info.jsonl` file tracks job status using structured batch objects:
 
 ```text
-{\"input_file\": \"input1.jsonl\", \"job_name\": \"projects/.../batches/...\", \"created_at\": \"2024-01-01T12:00:00\"}
-{\"input_file\": \"input2.jsonl\", \"job_name\": \"projects/.../batches/...\", \"created_at\": \"2024-01-01T12:01:00\", \"completed_at\": \"2024-01-01T12:30:00\", \"final_state\": \"JOB_STATE_SUCCEEDED\", \"duration_seconds\": 1740}
+{\"input_file\": \"input1.jsonl\", \"batch\": {\"name\": \"batches/...\", \"state\": \"JOB_STATE_PENDING\", \"create_time\": \"2024-01-01T12:00:00+00:00\", \"model\": \"models/gemini-2.5-flash-lite-preview-06-17\"}}
+{\"input_file\": \"input2.jsonl\", \"batch\": {\"name\": \"batches/...\", \"state\": \"JOB_STATE_SUCCEEDED\", \"create_time\": \"2024-01-01T12:01:00+00:00\", \"end_time\": \"2024-01-01T12:30:00+00:00\", \"model\": \"models/gemini-2.5-flash-lite-preview-06-17\", \"dest\": {\"file_name\": \"files/batch-...\"}}}
 ```
 
 ## Examples

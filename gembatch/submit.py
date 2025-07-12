@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from google import genai
 from google.genai import types
+from gembatch.batch_info import batch_to_dict
 
 
 def load_existing_jobs(job_info_file):
@@ -49,7 +50,8 @@ def submit_batch_job(input_file, client, existing_jobs, job_info_file, model_id)
     # Check if job already exists
     if input_file in existing_jobs:
         job_record = existing_jobs[input_file]
-        print(f"Skip: {input_file} already submitted (job: {job_record['job_name']})")
+        batch_name = job_record['batch']['name']
+        print(f"Skip: {input_file} already submitted (job: {batch_name})")
         return True
     
     print(f"Uploading file: {input_file}")
@@ -74,13 +76,10 @@ def submit_batch_job(input_file, client, existing_jobs, job_info_file, model_id)
         
         print(f"Batch job created successfully: {batch_job.name}")
         
-        # Record job information
+        # Record job information in new format
         job_record = {
             "input_file": input_file,
-            "job_name": batch_job.name,
-            "uploaded_file_name": uploaded_file.name,
-            "display_name": f"batch-job-{input_path.stem}",
-            "created_at": datetime.now().isoformat()
+            "batch": batch_to_dict(batch_job)
         }
         
         save_job_record(job_record, job_info_file)

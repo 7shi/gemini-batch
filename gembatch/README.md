@@ -32,6 +32,14 @@ This package provides command-line tools for managing Google Gemini batch jobs e
 - Comprehensive job state tracking (success/failure/cancellation)
 - Automatic resource cleanup to prevent quota bloat
 
+#### `batch_info.py` - [Documentation](batch_info.md)
+**Batch job data serialization and format conversion**
+
+- Structured batch object serialization via `batch_to_dict()`
+- Conversion from legacy flat format to new nested format
+- Standardized job information schema across modules
+- Standalone utility for batch data format migration
+
 ### Supporting Files
 
 #### `__init__.py` - [Documentation](__init__.md)
@@ -48,6 +56,7 @@ The package follows a modular design with clear separation of concerns:
 - **main.py**: Handles CLI parsing and coordinates between modules
 - **submit.py**: Focuses on job creation and submission logic
 - **poll.py**: Manages job monitoring and result retrieval
+- **batch_info.py**: Provides batch data serialization and format standardization
 - **__init__.py**: Provides package-level configuration
 
 All modules are designed to work together through the unified CLI interface provided by `main.py`, while maintaining independence for testing and maintenance purposes.

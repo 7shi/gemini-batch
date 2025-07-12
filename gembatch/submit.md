@@ -32,10 +32,10 @@
 
 **Solution**: Implemented existence verification for each input file and pre-validation of GEMINI_API_KEY environment variable, with early termination and appropriate error messages for problematic conditions.
 
-### Enhanced Operations Through Timestamp Recording
-**Problem**: Without job submission time information in job management history, estimating processing time and investigating issues becomes difficult.
+### Enhanced Operations Through Batch Information Recording
+**Problem**: Without comprehensive job information in job management history, estimating processing time and investigating issues becomes difficult.
 
-**Solution**: Record submission time using `datetime.now().isoformat()` in job_record's `created_at` field after successful `client.batches.create`, enabling chronological management and operational analysis.
+**Solution**: Record complete batch job information using `batch_to_dict()` in job_record's `batch` object after successful `client.batches.create`, storing structured data including creation time, model, state, and other metadata for comprehensive operational analysis.
 
 ### Configurable Model Selection for Flexibility
 **Problem**: Different use cases require different Gemini models (e.g., thinking models for complex reasoning, flash models for speed), but hardcoding a single model would limit tool adaptability.
