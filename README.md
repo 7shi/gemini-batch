@@ -2,6 +2,10 @@
 
 Command-line tools for managing Google Gemini batch jobs efficiently.
 
+For more information about Gemini Batch Mode, see the official documentation.
+
+- [Batch Mode | Gemini API | Google AI for Developers](https://ai.google.dev/gemini-api/docs/batch-mode).
+
 ## Features
 
 - **Submit**: Upload JSONL files and create Gemini batch jobs with model selection
@@ -110,7 +114,7 @@ your-project/
 
 The `job-info.jsonl` file tracks job status:
 
-```jsonl
+```text
 {\"input_file\": \"input1.jsonl\", \"job_name\": \"projects/.../batches/...\", \"created_at\": \"2024-01-01T12:00:00\"}
 {\"input_file\": \"input2.jsonl\", \"job_name\": \"projects/.../batches/...\", \"created_at\": \"2024-01-01T12:01:00\", \"completed_at\": \"2024-01-01T12:30:00\", \"final_state\": \"JOB_STATE_SUCCEEDED\", \"duration_seconds\": 1740}
 ```
