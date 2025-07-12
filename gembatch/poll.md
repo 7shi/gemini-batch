@@ -37,10 +37,10 @@
 
 **Solution**: Through persistence of completion state via `batch.state` in the structured batch object, automatically detect only incomplete jobs during re-execution after script interruption. Already completed jobs are skipped for efficient processing resumption.
 
-### Rich TUI Fixed-position Display with Optimized UI
+### Rich TUI Fixed-position Display with Manual Refresh Control
 **Problem**: Traditional log output format during long-term polling of 23 jobs creates continuous log flow making current status difficult to grasp, requiring scrolling to check past information.
 
-**Solution**: Implemented TUI-like fixed-position display using `rich.live.Live` with optimized UI layout. The current implementation features a bordered panel containing the job status table, with summary information and countdown timer positioned below the table to minimize screen flicker. During status checks, individual job rows are highlighted with red background for immediate visual feedback. Removed `refresh_per_second` parameter to enable immediate rendering instead of delayed periodic updates, ensuring real-time responsiveness during status checking operations. Detailed optimization techniques are documented in [Rich Library Refresh Optimization Guide](../docs/20250713-rich-refresh.md).
+**Solution**: Implemented TUI-like fixed-position display using `rich.live.Live` with manual refresh control. The implementation uses `auto_refresh=False` to prevent automatic screen updates during sleep intervals, ensuring updates occur only when explicitly triggered by `live.update()` and `live.refresh()` calls. This eliminates unnecessary redraws during countdown timers and provides precise control over when the display refreshes. The UI features a bordered panel with job status table and summary information positioned to minimize screen flicker during updates. Individual job rows are highlighted with red background during status checks for immediate visual feedback. Detailed optimization techniques are documented in [Rich Library Refresh Optimization Guide](../docs/20250713-rich-refresh.md).
 
 ### Comprehensive Job State Management
 **Problem**: Managing only successful jobs would leave failure and cancellation status unclear, making operational problem analysis and re-execution decisions difficult.

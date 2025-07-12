@@ -23,6 +23,11 @@ with Live(console=console, refresh_per_second=1) as live:
 # Immediate refresh on update (recommended for real-time feedback)
 with Live(console=console) as live:
     live.update(content)  # Displays immediately
+
+# Manual refresh control (prevents unwanted updates)
+with Live(console=console, auto_refresh=False) as live:
+    live.update(content)
+    live.refresh()  # Explicit refresh required
 ```
 
 ## Anti-Flicker Strategies
@@ -150,17 +155,18 @@ class OptimizedDisplay:
         # Dynamic content below (maximum redraw isolation)
         return Group(panel, Text(""), Align.left(self.summary))
 
-# Usage
-with Live(console=console) as live:
+# Usage with manual refresh control
+with Live(console=console, auto_refresh=False) as live:
     for i, item in enumerate(items):
         display = OptimizedDisplay(items, active_item=i)
-        live.update(display)  # Immediate refresh
+        live.update(display)
+        live.refresh()  # Explicit refresh for immediate display
         process_item(item)
 ```
 
 ## Best Practices Summary
 
-1. **Remove `refresh_per_second`** for immediate real-time updates
+1. **Use `auto_refresh=False`** with explicit `live.refresh()` calls for precise update control
 2. **Position dynamic content at bottom** to minimize redraw area
 3. **Use color-only changes** instead of text changes for status indicators
 4. **Avoid complex layouts** (`Panel`, `Columns`) for frequently updated content
@@ -170,8 +176,8 @@ with Live(console=console) as live:
 ## Real-World Results
 
 In our batch job monitoring implementation:
-- **Before optimization**: Severe flicker during status checks, 1-second update delays
-- **After optimization**: Minimal flicker, immediate visual feedback for status changes
-- **Key change**: Moved summary + countdown from top Panel to bottom Group element
+- **Before optimization**: Severe flicker during status checks, automatic updates during sleep intervals
+- **After optimization**: Precise update control, updates only when explicitly triggered
+- **Key change**: Implemented `auto_refresh=False` with manual `live.refresh()` calls
 
-This approach provides smooth, responsive user interfaces while maintaining Rich's powerful formatting capabilities.
+This approach provides precise control over display updates while eliminating unnecessary screen refreshes during idle periods.

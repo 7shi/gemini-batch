@@ -293,12 +293,13 @@ def download_job_results(client, job, input_file_path):
 
 def poll_jobs(job_info_file, client):
     """Poll jobs and process completed ones"""
-    with Live(console=console) as live:
+    with Live(console=console, auto_refresh=False) as live:
         while True:
             # Load latest job information
             jobs = load_jobs_from_file(job_info_file)
             if not jobs:
                 live.update(Text("Error: No jobs found", style="red bold"))
+                live.refresh()
                 break
             
             # Get incomplete jobs
@@ -307,6 +308,7 @@ def poll_jobs(job_info_file, client):
             
             # Update display
             live.update(create_job_status_display(jobs, current_time))
+            live.refresh()
             
             # Exit loop if all jobs are completed
             if not pending_jobs:
@@ -326,6 +328,7 @@ def poll_jobs(job_info_file, client):
                 # Show checking status for this specific job
                 display = JobStatusDisplay(jobs, current_time, checking_job_index=i)
                 live.update(display)
+                live.refresh()
                 
                 try:
                     batch_job = client.batches.get(name=job_name)
@@ -364,6 +367,7 @@ def poll_jobs(job_info_file, client):
                 for countdown in range(POLL_INTERVAL, -1, -1):
                     display.update_countdown(countdown)
                     live.update(display)
+                    live.refresh()
                     time.sleep(1)
 
 
