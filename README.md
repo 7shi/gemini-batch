@@ -27,8 +27,8 @@ The `poll` command provides a live TUI showing:
 │ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┓ │
 │ ┃ Input File                       ┃ State      ┃ Create Time         ┃ End Time ┃ Duration ┃ │
 │ ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━┩ │
-│ │ examples/basic.jsonl             │ ⏳ Running │ 2025-07-13 04:20:32 │          │          │ │
-│ │ examples/structured-output.jsonl │ ⏳ Running │ 2025-07-13 04:20:35 │          │          │ │
+│ │ examples/basic.jsonl             │   Running  │ 2025-07-13 04:20:32 │          │          │ │
+│ │ examples/structured-output.jsonl │   Running  │ 2025-07-13 04:20:35 │          │          │ │
 │ └──────────────────────────────────┴────────────┴─────────────────────┴──────────┴──────────┘ │
 │                                                                                               │
 │ Total jobs: 2 | Completed: 0 | Remaining: 2 | Next poll: 5s                                   │
