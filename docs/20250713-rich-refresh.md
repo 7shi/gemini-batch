@@ -176,8 +176,10 @@ with Live(console=console, auto_refresh=False) as live:
 ## Real-World Results
 
 In our batch job monitoring implementation:
-- **Before optimization**: Severe flicker during status checks, automatic updates during sleep intervals
-- **After optimization**: Precise update control, updates only when explicitly triggered
-- **Key change**: Implemented `auto_refresh=False` with manual `live.refresh()` calls
+- **Before optimization**: Severe flicker during status checks, automatic updates during sleep intervals with 1-second countdown updates
+- **After optimization**: Precise update control, updates only when explicitly triggered, countdown interval reduced to 5 seconds
+- **Key changes**: 
+  1. Implemented `auto_refresh=False` with manual `live.refresh()` calls
+  2. Reduced countdown update frequency from 30 times to 6 times per polling cycle (5-second intervals)
 
-This approach provides precise control over display updates while eliminating unnecessary screen refreshes during idle periods.
+This approach provides precise control over display updates while eliminating unnecessary screen refreshes during idle periods and significantly reducing flicker from frequent countdown updates.

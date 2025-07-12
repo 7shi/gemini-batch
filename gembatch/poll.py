@@ -364,11 +364,12 @@ def poll_jobs(job_info_file, client):
             if remaining > 0:
                 # Create display object once
                 display = JobStatusDisplay(jobs, current_time)
-                for countdown in range(POLL_INTERVAL, -1, -1):
+                for countdown in range(POLL_INTERVAL, -1, -5):
                     display.update_countdown(countdown)
                     live.update(display)
                     live.refresh()
-                    time.sleep(1)
+                    if countdown > 0:
+                        time.sleep(5)
 
 
 def main_with_args(args, client):
