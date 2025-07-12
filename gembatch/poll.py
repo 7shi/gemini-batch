@@ -16,7 +16,7 @@ from rich.live import Live
 from rich.table import Table
 from rich.columns import Columns
 from rich.align import Align
-from rich.console import Console
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.text import Text
 from gembatch.batch_info import batch_to_dict
@@ -41,11 +41,13 @@ def to_local_time(iso_time_str):
 
 class JobStatusDisplay:
     """Updatable job status display"""
-    def __init__(self, jobs, last_update):
+    def __init__(self, jobs, last_update, checking_job_index=None):
         self.jobs = jobs
         self.last_update = last_update
+        self.checking_job_index = checking_job_index
         self.summary_text = Text()
         self.last_update_text = Text(f"Last update: {last_update}", style="dim")
+        self.countdown_text = Text()
         self._build_display()
     
     def _build_display(self):
@@ -58,7 +60,7 @@ class JobStatusDisplay:
         self.table.add_column("Duration", style="yellow")
         
         completed_count = 0
-        for job in self.jobs:
+        for job_index, job in enumerate(self.jobs):
             input_file = job['input_file']
             batch = job['batch']
             batch_state = batch.get('state', '')
@@ -79,7 +81,11 @@ class JobStatusDisplay:
                     status_style = "green"
             else:
                 status = "⏳ Running"
-                status_style = "yellow"
+                # Check if this specific job is being checked
+                if self.checking_job_index == job_index:
+                    status_style = "white on red"
+                else:
+                    status_style = "yellow"
             
             # Extract times from batch object and convert to local time
             create_time = batch.get('create_time', '')
@@ -121,38 +127,49 @@ class JobStatusDisplay:
         self.pending_jobs = total_jobs - completed_count
         self._update_summary()
     
-    def _update_summary(self, countdown=None):
+    def _update_summary(self, countdown=None, checking=False):
         total_jobs = len(self.jobs)
         completed_count = total_jobs - self.pending_jobs
         
+        # Build combined summary and countdown text
         self.summary_text.plain = ""
         self.summary_text.append(f"Total jobs: {total_jobs} | ", style="bold")
         self.summary_text.append(f"Completed: {completed_count} | ", style="green bold")
         self.summary_text.append(f"Remaining: {self.pending_jobs}", style="yellow bold")
         
-        if countdown is not None:
+        # Add status or countdown
+        if checking:
+            self.summary_text.append(" | Checking status...", style="orange1 bold")
+        elif countdown is not None:
             self.summary_text.append(f" | Next poll: {countdown}s", style="cyan")
     
     def update_countdown(self, countdown):
         """Update only the countdown part"""
         self._update_summary(countdown)
     
+    def set_checking_status(self):
+        """Set checking status message and rebuild display"""
+        self._build_display()
+        if self.checking_job_index is not None:
+            self._update_summary(checking=True)
+        else:
+            self._update_summary()
+    
     def __rich__(self):
-        content = [
+        panel_content = [
             self.last_update_text,
             Text(""),
-            self.summary_text,
+            self.table,
             Text(""),
-            self.table
+            Align.left(self.summary_text)
         ]
         
         if self.pending_jobs == 0:
-            content.append(Text(""))
-            content.append(Text("🎉 All jobs completed!", style="green bold"))
-        
+            panel_content.append(Text(""))
+            panel_content.append(Text("🎉 All jobs completed!", style="green bold"))
         
         return Panel(
-            Align.center(Columns(content, equal=True, expand=True)),
+            Align.center(Columns(panel_content, equal=True, expand=True)),
             title="Gemini Batch Job Monitor",
             border_style="blue"
         )
@@ -276,7 +293,7 @@ def download_job_results(client, job, input_file_path):
 
 def poll_jobs(job_info_file, client):
     """Poll jobs and process completed ones"""
-    with Live(console=console, refresh_per_second=1) as live:
+    with Live(console=console) as live:
         while True:
             # Load latest job information
             jobs = load_jobs_from_file(job_info_file)
@@ -297,6 +314,7 @@ def poll_jobs(job_info_file, client):
             
             # Check status of each incomplete job
             newly_completed = 0
+            
             for i, job in enumerate(jobs):
                 job_name = job['batch']['name']
                 batch_state = job['batch'].get('state', '')
@@ -304,6 +322,10 @@ def poll_jobs(job_info_file, client):
                 # Skip if already completed
                 if batch_state in ['JOB_STATE_SUCCEEDED', 'JOB_STATE_FAILED', 'JOB_STATE_CANCELLED']:
                     continue
+                
+                # Show checking status for this specific job
+                display = JobStatusDisplay(jobs, current_time, checking_job_index=i)
+                live.update(display)
                 
                 try:
                     batch_job = client.batches.get(name=job_name)
