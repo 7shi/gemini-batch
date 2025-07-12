@@ -19,17 +19,27 @@ For more information about Gemini Batch Mode, see the official documentation.
 
 The `poll` command provides a live TUI showing:
 
-- ✓ Job status (Success/Failed/Cancelled/Running)
-- ⏱️ Creation and completion times
-- ⏳ Duration for completed jobs
-- 📊 Progress summary
-- ⏰ Countdown to next poll
+```text
+╭────────────────────────────────── Gemini Batch Job Monitor ───────────────────────────────────╮
+│ Last update: 2025-07-13 04:20:43                                                              │
+│                                                                                               │
+│                                       Batch Job Monitor                                       │
+│ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┓ │
+│ ┃ Input File                       ┃ State      ┃ Create Time         ┃ End Time ┃ Duration ┃ │
+│ ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━┩ │
+│ │ examples/basic.jsonl             │ ⏳ Running │ 2025-07-13 04:20:32 │          │          │ │
+│ │ examples/structured-output.jsonl │ ⏳ Running │ 2025-07-13 04:20:35 │          │          │ │
+│ └──────────────────────────────────┴────────────┴─────────────────────┴──────────┴──────────┘ │
+│                                                                                               │
+│ Total jobs: 2 | Completed: 0 | Remaining: 2 | Next poll: 5s                                   │
+╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+```
 
 ### Resume Support
 
 Jobs can be safely interrupted and resumed:
 
-1. **Submit** jobs: Creates persistent job-info.jsonl
+1. **Submit** jobs: Creates persistent `job-info.jsonl` file
 2. **Interrupt** polling: Ctrl+C safely exits
 3. **Resume** polling: Run `gembatch poll` again - only incomplete jobs are monitored
 
