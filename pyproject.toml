@@ -1,6 +1,6 @@
 [project]
 name = "gemini-batch"
-version = "0.1.0"
+version = "0.2.0"
 description = "Command-line tools for managing Google Gemini batch jobs"
 readme = "README.md"
 requires-python = ">=3.10"

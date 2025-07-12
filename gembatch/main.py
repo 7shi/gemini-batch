@@ -8,6 +8,7 @@ import sys
 import argparse
 from google import genai
 from . import submit, poll
+from . import __version__
 
 DEFAULT_MODEL = "gemini-2.5-flash-lite-preview-06-17"
 DEFAULT_JOB_INFO_FILE = "job-info.jsonl"
@@ -18,6 +19,13 @@ def create_parser():
     parser = argparse.ArgumentParser(
         prog='gembatch',
         description='Command-line tools for managing Google Gemini batch jobs'
+    )
+    
+    # Version argument
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'%(prog)s {__version__}'
     )
     
     # Global arguments
