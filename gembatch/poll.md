@@ -1,0 +1,58 @@
+# Batch Job Polling and Results Module
+
+## Why This Implementation Exists
+
+### Automated Multi-job Polling Management
+**Problem**: After submitting 23 batch jobs with submit_batch.py, manually checking each job's completion status and individually downloading results is inefficient and prone to oversight.
+
+**Solution**: Implemented automatic polling of all jobs in job-info.jsonl with automatic result download for completed jobs. Centralized monitoring and result retrieval through `gembatch poll` for comprehensive job management.
+
+### Integration with JSONL Job Management
+**Problem**: A polling system compatible with submit_batch.py's JSONL format job management was needed, but reference implementation only supported single job JSON format.
+
+**Solution**: Implemented mechanism to read each line of job-info.jsonl individually and determine completion status by presence of `completed_at` field, supporting concurrent management of multiple jobs.
+
+### Safe JSONL File Update Functionality
+**Problem**: Directly updating job-info.jsonl upon job completion risks file corruption due to interruption or exceptions during writing, with concerns about race conditions during concurrent execution.
+
+**Solution**: Implemented atomic operation of write to temporary file → delete original file → rename using `tempfile.NamedTemporaryFile` for safe update processing, preventing file corruption.
+
+### Systematic Result File Storage
+**Problem**: A systematic approach for saving each job's result files to appropriate locations was needed, while avoiding filename conflicts and location confusion.
+
+**Solution**: Adopted `batch/results/original-filename.jsonl` naming convention, creating results/ subdirectory within batch directory and preserving original filenames for result storage. Results from batch/003.jsonl are saved to batch/results/003.jsonl.
+
+### Error Handling and Continuity Assurance
+**Problem**: If polling errors occur for one job, stopping overall monitoring would prevent result retrieval for other normal jobs.
+
+**Solution**: Wrapped each job's polling in individual try-catch blocks, designed to continue processing other jobs even when errors occur. Error content is displayed but overall monitoring continues with safe implementation.
+
+### Operational Visibility Through Progress Display
+**Problem**: When polling 23 jobs for extended periods, unclear progress status and job states prevent operators from understanding the situation.
+
+**Solution**: Implemented detailed progress display with timestamps showing each job's state, newly completed count, remaining jobs, and countdown to next polling, achieving complete visibility of operational status.
+
+### Interruption and Resume Support for Flexibility
+**Problem**: When interruption becomes necessary during long polling operations, re-downloading results from already completed jobs wastes time and resources.
+
+**Solution**: Through persistence of completion state via `completed_at` field, automatically detect only incomplete jobs during re-execution after script interruption. Already completed jobs are skipped for efficient processing resumption.
+
+### Rich TUI Fixed-position Display
+**Problem**: Traditional log output format during long-term polling of 23 jobs creates continuous log flow making current status difficult to grasp, requiring scrolling to check past information.
+
+**Solution**: Implemented TUI-like fixed-position display using `rich.live.Live`, updating table content at the same position without clearing screen, showing job status, creation time, completion time, and duration in list format. Included countdown timer for clear operational status display.
+
+### Comprehensive Job State Management
+**Problem**: Managing only successful jobs would leave failure and cancellation status unclear, making operational problem analysis and re-execution decisions difficult.
+
+**Solution**: Record `final_state`, `completed_at`, and `duration_seconds` in job-info.jsonl for all termination states (success/failure/cancellation). TUI display also color-codes states (✓ success=green, ✗ failure=red, ⊘ cancellation=orange) for comprehensive management of all job situations.
+
+### Automatic Processing Time Calculation and Recording
+**Problem**: Understanding each job's processing time for batch processing performance analysis and operational planning is desired, but manual time measurement is difficult and inaccurate.
+
+**Solution**: Automatically calculate duration from `created_at` and `completed_at`, recording as `duration_seconds` in JSONL. TUI display shows in readable "3h 45m 30s" format, enabling processing performance analysis and future processing time prediction.
+
+### Automated Resource Cleanup for Operational Load Reduction
+**Problem**: When Gemini API batch jobs and uploaded input files remain after job completion, API quota pressure and increased management overhead create operational burden.
+
+**Solution**: Automatically delete batch jobs and input files through `cleanup_job_resources` function upon job completion (regardless of success/failure/cancellation). Incorporated safe deletion processing that continues even when exceptions occur, eliminating need for manual cleanup work by operators.
