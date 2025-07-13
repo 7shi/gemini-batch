@@ -24,6 +24,42 @@ def get_batch_info(client, batch_name):
     batch = client.batches.get(name=batch_name)
     return batch_to_dict(batch)
 
+def count_lines(filename):
+    """Count non-empty lines in a file"""
+    count = 0
+    with open(filename, "r") as f:
+        for line in f:
+            if line.strip():
+                count += 1
+    return count
+
+def convert_job_if_needed(client, job_info):
+    """Convert job info if needed, return dict or None if no conversion needed"""
+    # Check if already in new format and count exists
+    if "batch" in job_info and job_info.get("count"):
+        return None  # No conversion needed
+    
+    input_file = job_info["input_file"]
+    
+    # If batch field exists but count is missing/zero, add count
+    if "batch" in job_info:
+        return {
+            "input_file": input_file,
+            "count": count_lines(input_file),
+            "batch": job_info["batch"]
+        }
+    
+    # Legacy format: fetch batch info from API
+    job_name = job_info["job_name"]
+    batch_dict = get_batch_info(client, job_name)
+    count = count_lines(input_file)
+    
+    return {
+        "input_file": input_file,
+        "count": count,
+        "batch": batch_dict
+    }
+
 def main():
     parser = argparse.ArgumentParser(description="Process batch job information from JSONL file")
     parser.add_argument("input_file", help="Input JSONL file containing job information")
@@ -38,15 +74,10 @@ def main():
                 continue
                 
             job_info = json.loads(line)
-            job_name = job_info["job_name"]
-            input_file = job_info["input_file"]
             
-            batch_dict = get_batch_info(client, job_name)
-            
-            result = {
-                "input_file": input_file,
-                "batch": batch_dict
-            }
+            result = convert_job_if_needed(client, job_info)
+            if result is None:
+                result = job_info  # Use original if no conversion needed
             
             print(json.dumps(result))
 

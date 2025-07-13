@@ -60,14 +60,25 @@ Converts a BatchJob object to a dictionary with the following fields:
 
 Retrieves batch job information using the Gemini client and returns it as a dictionary.
 
+### `count_lines(filename)`
+
+Counts non-empty lines in a file to determine the number of queries.
+
+### `convert_job_if_needed(client, job_info)`
+
+Core conversion function that:
+- Returns `None` if job_info is already in the correct format (has batch field and count)
+- Adds missing count field if batch exists but count is missing/zero
+- Converts legacy format to new format by fetching batch info from API
+
 ### `main()`
 
-For backward compatibility:
+Main processing loop:
 1. Parses command line arguments to get input file path
 2. Initializes the Gemini client
 3. Reads job information from the specified JSONL file
-4. For each job, retrieves detailed batch information
-5. Outputs combined data in JSONL format
+4. For each job, calls `convert_job_if_needed()` to handle conversion
+5. Outputs either converted or original data in JSONL format
 
 ## Backward Compatibility
 
@@ -75,20 +86,24 @@ The script was developed based on interactive exploration of the Google Gemini b
 
 ### Usage
 
-For converting from old format (v0.1.0):
+The script supports two modes of operation:
 
-```bash
-uv run batch_info.py <input_file>
-```
-
-For example:
+1. **Legacy mode** (for v0.1.0 format conversion):
 ```bash
 uv run batch_info.py job-info.jsonl
 ```
 
+2. **Passthrough mode** (when input already contains batch data):
+```bash
+uv run batch_info.py processed-data.jsonl
+```
+
 ### Input Format
 
-The script expects a JSONL file with entries like (formatted):
+The script automatically detects the input format and switches behavior:
+
+#### Legacy Format (v0.1.0)
+For legacy mode, the script expects entries like:
 
 ```json
 {
@@ -103,6 +118,9 @@ The script expects a JSONL file with entries like (formatted):
 }
 ```
 
+#### Passthrough Mode
+For passthrough mode, the input should match the output format. If `count` is missing or zero, it will be calculated from the input file.
+
 ### Output Format
 
 The script outputs JSONL with the following structure (formatted):
@@ -110,6 +128,7 @@ The script outputs JSONL with the following structure (formatted):
 ```json
 {
   "input_file": "1-simple/batch_requests.jsonl",
+  "count": 5,
   "batch": {
     "name": "batches/...",
     "display_name": "batch-job-batch_requests",
@@ -124,3 +143,5 @@ The script outputs JSONL with the following structure (formatted):
   }
 }
 ```
+
+The `count` field represents the number of queries (non-empty lines) in the input file.
