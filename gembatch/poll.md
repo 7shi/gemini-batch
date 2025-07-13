@@ -56,3 +56,8 @@
 **Problem**: When Gemini API batch jobs remain after job completion, API quota pressure and increased management overhead create operational burden.
 
 **Solution**: Automatically delete batch jobs through `cleanup_job_resources` function upon job completion (regardless of success/failure/cancellation). Job names are extracted from `batch.name` in the structured batch object. Incorporated safe deletion processing that continues even when exceptions occur, eliminating need for manual cleanup work by operators.
+
+### Complete Resource Cleanup Discovery and Implementation
+**Problem**: The original cleanup implementation only deleted batch jobs but left uploaded source files (src) in the cloud, discovered when implementing the standalone cleanup functionality that revealed orphaned files accumulating in the system.
+
+**Solution**: Enhanced `cleanup_job_resources` to delete both source files (`batch_job.src.file_name`) and batch jobs, while preserving result files (`batch_job.dest.file_name`) that users have already downloaded. The function now receives the `batch_job` object directly to avoid redundant API calls, since the batch information is already retrieved during status checking. Each deletion operation is wrapped in individual try-catch blocks to ensure cleanup continues even if specific resources fail to delete.

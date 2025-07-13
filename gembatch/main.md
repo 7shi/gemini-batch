@@ -5,7 +5,7 @@
 ### Unified Entry Point Architecture
 **Problem**: Multiple independent scripts (submit_batch.py, poll_batch.py) required users to remember different command names and manage separate configurations, leading to confusion and inconsistent usage patterns.
 
-**Solution**: Implemented a single CLI entry point with subcommands (`gembatch submit`, `gembatch poll`) to provide a cohesive user experience and centralized configuration management.
+**Solution**: Implemented a single CLI entry point with subcommands (`gembatch submit`, `gembatch poll`, `gembatch cleanup`) to provide a cohesive user experience and centralized configuration management.
 
 ### Centralized API Client Management
 **Problem**: Each module independently handled GEMINI_API_KEY validation and client initialization, creating code duplication and inconsistent error handling across commands.
@@ -21,3 +21,8 @@
 **Problem**: Submit-specific options like `--model` should not be available or confusing when running poll operations, but a flat argument structure would mix unrelated options.
 
 **Solution**: Used argparse subparsers to isolate command-specific arguments while preserving global options, providing clear command boundaries and preventing invalid option combinations.
+
+### Resource Management Integration
+**Problem**: Users needed a separate cleanup utility to manage Gemini batch resources, but running it as an independent script created inconsistent API client configuration and authentication patterns.
+
+**Solution**: Integrated cleanup functionality as a subcommand (`gembatch cleanup`) to leverage the same API client initialization and error handling infrastructure, while providing optional `--yes` flag for automation scenarios.

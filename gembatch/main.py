@@ -7,7 +7,7 @@ import os
 import sys
 import argparse
 from google import genai
-from . import submit, poll
+from . import submit, poll, cleanup
 from . import __version__
 
 DEFAULT_MODEL = "gemini-2.5-flash-lite-preview-06-17"
@@ -63,6 +63,17 @@ def create_parser():
         help='Poll batch jobs and download results when completed'
     )
     
+    # Cleanup subcommand
+    cleanup_parser = subparsers.add_parser(
+        'cleanup',
+        help='Clean up Gemini batch resources (files and batch jobs)'
+    )
+    cleanup_parser.add_argument(
+        '-y', '--yes',
+        action='store_true',
+        help='Skip confirmation prompt and delete all resources'
+    )
+    
     return parser
 
 
@@ -95,6 +106,8 @@ def main():
             return submit.main_with_args(args, client)
         elif args.command == 'poll':
             return poll.main_with_args(args, client)
+        elif args.command == 'cleanup':
+            return cleanup.main_with_args(args, client)
         else:
             print(f"Unknown command: {args.command}", file=sys.stderr)
             sys.exit(1)

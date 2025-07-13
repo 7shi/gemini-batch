@@ -245,9 +245,17 @@ def write_updated_jobs(job_info_file, jobs):
         raise e
 
 
-def cleanup_job_resources(client, job):
+def cleanup_job_resources(client, batch_job):
     """Clean up job and file resources"""
-    job_name = job['batch']['name']
+    job_name = batch_job.name
+    
+    # Delete source file if it exists
+    if hasattr(batch_job, 'src') and batch_job.src:
+        try:
+            client.files.delete(name=batch_job.src.file_name)
+        except Exception:
+            # Ignore errors (might already be deleted)
+            pass
     
     # Delete batch job
     try:
@@ -334,6 +342,9 @@ def poll_jobs(job_info_file, client):
                     batch_job = client.batches.get(name=job_name)
                     current_state = batch_job.state.name
                     
+                    # Update job with new batch information immediately
+                    job['batch'] = batch_to_dict(batch_job)
+                    
                     if current_state != "JOB_STATE_PENDING":
                         # Job completed (success, failure, or cancellation)
                         if current_state == "JOB_STATE_SUCCEEDED":
@@ -342,10 +353,7 @@ def poll_jobs(job_info_file, client):
                             # Download result is for internal processing only
                         
                         # Clean up resources regardless of success/failure
-                        cleanup_job_resources(client, job)
-                        
-                        # Update job with new batch information
-                        job['batch'] = batch_to_dict(batch_job)
+                        cleanup_job_resources(client, batch_job)
                         
                         # Write updated job info
                         write_updated_jobs(job_info_file, jobs)

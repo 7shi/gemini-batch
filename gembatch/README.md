@@ -12,7 +12,7 @@ This package provides command-line tools for managing Google Gemini batch jobs e
 - Unified command-line interface for all batch operations
 - Global argument handling (`--job-info`)
 - Centralized API key validation and client initialization
-- Subcommand routing for submit/poll operations
+- Subcommand routing for submit/poll/cleanup operations
 
 #### `submit.py` - [Documentation](submit.md)
 **Batch job submission functionality**
@@ -31,6 +31,14 @@ This package provides command-line tools for managing Google Gemini batch jobs e
 - Interrupt-safe state management with atomic updates
 - Comprehensive job state tracking (success/failure/cancellation)
 - Automatic resource cleanup to prevent quota bloat
+
+#### `cleanup.py` - [Documentation](cleanup.md)
+**Resource cleanup and management**
+
+- Comprehensive batch resource discovery (files and jobs)
+- Safe deletion with confirmation prompts
+- Automation support via `--yes` flag
+- Error-resilient cleanup with individual resource handling
 
 #### `batch_info.py` - [Documentation](batch_info.md)
 **Batch job data serialization and format conversion**
@@ -56,6 +64,7 @@ The package follows a modular design with clear separation of concerns:
 - **main.py**: Handles CLI parsing and coordinates between modules
 - **submit.py**: Focuses on job creation and submission logic
 - **poll.py**: Manages job monitoring and result retrieval
+- **cleanup.py**: Handles batch resource cleanup and management
 - **batch_info.py**: Provides batch data serialization and format standardization
 - **__init__.py**: Provides package-level configuration
 
@@ -68,6 +77,7 @@ This package is designed to be used through the main CLI entry point:
 ```bash
 gembatch --job-info custom.jsonl submit -m gemini-2.0-flash *.jsonl
 gembatch --job-info custom.jsonl poll
+gembatch cleanup --yes
 ```
 
 For detailed usage instructions, see the main [README.md](../README.md) in the project root.
