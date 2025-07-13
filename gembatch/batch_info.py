@@ -35,30 +35,34 @@ def count_lines(filename):
 
 def convert_job_if_needed(client, job_info):
     """Convert job info if needed, return dict or None if no conversion needed"""
-    # Check if already in new format and count exists
-    if "batch" in job_info and job_info.get("count"):
-        return None  # No conversion needed
-    
     input_file = job_info["input_file"]
     
     # If batch field exists but count is missing/zero, add count
     if "batch" in job_info:
-        return {
+        # Check if already in new format and count exists
+        if "count" in job_info:
+            return None  # No conversion needed
+        
+        result = {
             "input_file": input_file,
             "count": count_lines(input_file),
+            "uploaded_file_name": job_info.get("uploaded_file_name", ""),
             "batch": job_info["batch"]
         }
+        return result
     
     # Legacy format: fetch batch info from API
     job_name = job_info["job_name"]
     batch_dict = get_batch_info(client, job_name)
     count = count_lines(input_file)
     
-    return {
+    result = {
         "input_file": input_file,
         "count": count,
+        "uploaded_file_name": job_info["uploaded_file_name"],
         "batch": batch_dict
     }
+    return result
 
 def main():
     parser = argparse.ArgumentParser(description="Process batch job information from JSONL file")

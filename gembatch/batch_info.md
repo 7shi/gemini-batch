@@ -69,6 +69,7 @@ Counts non-empty lines in a file to determine the number of queries.
 Core conversion function that serves as a backward compatibility trick:
 - Returns `None` if job_info is already in the correct format (has batch field and count)
 - Adds missing count field if batch exists but count is missing/zero
+- Preserves `uploaded_file_name` field during conversion to maintain source file cleanup capability
 - Converts legacy format to new format by fetching batch info from API
 - This function enables seamless migration from v0.1.0 format without breaking existing workflows
 
@@ -130,6 +131,7 @@ The script outputs JSONL with the following structure (formatted):
 {
   "input_file": "1-simple/batch_requests.jsonl",
   "count": 5,
+  "uploaded_file_name": "files/...",
   "batch": {
     "name": "batches/...",
     "display_name": "batch-job-batch_requests",
@@ -146,3 +148,4 @@ The script outputs JSONL with the following structure (formatted):
 ```
 
 The `count` field represents the number of queries (non-empty lines) in the input file.
+The `uploaded_file_name` field stores the source file identifier for cleanup operations.

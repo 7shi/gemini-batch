@@ -41,3 +41,8 @@
 **Problem**: Different use cases require different Gemini models (e.g., thinking models for complex reasoning, flash models for speed), but hardcoding a single model would limit tool adaptability.
 
 **Solution**: Added `-m`/`--model` parameter with sensible default (gemini-2.5-flash-lite-preview-06-17) to allow model selection while providing out-of-the-box functionality for most users.
+
+### Comprehensive Job Record Enhancement for Resource Management
+**Problem**: Job records needed to include complete information for downstream operations: query count for monitoring displays and source file identifiers for reliable cleanup operations during polling.
+
+**Solution**: Enhanced job record structure to include `count` field (calculated using `count_lines()` from batch_info module) showing the number of queries in each input file, and `uploaded_file_name` field preserving the source file identifier returned by the upload API. This comprehensive recording enables effective monitoring through query count visibility and ensures reliable resource cleanup regardless of API limitations in batch objects.

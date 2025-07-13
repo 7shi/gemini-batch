@@ -60,7 +60,7 @@
 ### Complete Resource Cleanup Discovery and Implementation
 **Problem**: The original cleanup implementation only deleted batch jobs but left uploaded source files (src) in the cloud, discovered when implementing the standalone cleanup functionality that revealed orphaned files accumulating in the system.
 
-**Solution**: Enhanced `cleanup_job_resources` to delete both source files (`batch_job.src.file_name`) and batch jobs, while preserving result files (`batch_job.dest.file_name`) that users have already downloaded. The function now receives the `batch_job` object directly to avoid redundant API calls, since the batch information is already retrieved during status checking. Each deletion operation is wrapped in individual try-catch blocks to ensure cleanup continues even if specific resources fail to delete.
+**Solution**: Enhanced `cleanup_job_resources` to delete both source files and batch jobs, while preserving result files (`batch_job.dest.file_name`) that users have already downloaded. Since batch objects don't contain source file information (src field is not available in Gemini API), the implementation now uses the `uploaded_file_name` field stored in job records during submission. The function receives the complete `job` object to access both `uploaded_file_name` for source file cleanup and `batch.name` for batch job deletion. Each deletion operation is wrapped in individual try-catch blocks to ensure cleanup continues even if specific resources fail to delete.
 
 ### Backward Compatibility Through Automatic Format Conversion
 **Problem**: As the project evolved, job-info.jsonl files existed in both legacy format (v0.1.0 with job_name field) and new format (with batch field and count). Users needed seamless polling regardless of format without manual conversion steps.
@@ -76,3 +76,8 @@
 **Problem**: When monitoring multiple batch jobs, operators needed to quickly assess the scale of each job (number of queries) to understand processing load and estimate completion times, but this information was not visible in the monitoring interface.
 
 **Solution**: Added Count column to the TUI display showing the number of queries in each input file. The count is displayed with comma separators for readability (e.g., "1,000") and right-aligned for easy visual comparison. This enhancement provides immediate visibility into job scale and helps operators prioritize attention during monitoring.
+
+### Source File Information Preservation for Reliable Cleanup
+**Problem**: Batch objects returned by the Gemini API don't contain source file information (src field is not available), making it impossible to clean up uploaded source files during job completion, leading to orphaned files accumulating in the system.
+
+**Solution**: Modified submit process to store `uploaded_file_name` field in job records during submission, preserving the source file identifier for later cleanup operations. Updated `cleanup_job_resources` function to accept complete job objects and use the stored `uploaded_file_name` for source file deletion. This approach ensures reliable cleanup regardless of API limitations while maintaining backward compatibility through the `convert_job_if_needed` function that preserves existing `uploaded_file_name` fields during format conversion.

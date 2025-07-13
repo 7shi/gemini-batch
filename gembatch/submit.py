@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from google import genai
 from google.genai import types
-from gembatch.batch_info import batch_to_dict
+from gembatch.batch_info import batch_to_dict, count_lines
 
 
 def load_existing_jobs(job_info_file):
@@ -59,7 +59,7 @@ def submit_batch_job(input_file, client, existing_jobs, job_info_file, model_id)
         uploaded_file = client.files.upload(
             file=str(input_path),
             config=types.UploadFileConfig(
-                display_name=f"batch-input-{input_path.stem}",
+                display_name=input_file,
                 mime_type="jsonl"
             )
         )
@@ -79,6 +79,8 @@ def submit_batch_job(input_file, client, existing_jobs, job_info_file, model_id)
         # Record job information in new format
         job_record = {
             "input_file": input_file,
+            "count": count_lines(input_file),
+            "uploaded_file_name": uploaded_file.name,
             "batch": batch_to_dict(batch_job)
         }
         

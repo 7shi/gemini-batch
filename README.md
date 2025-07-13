@@ -123,7 +123,7 @@ gembatch --job-info my-jobs.jsonl poll
 
 ### Cleanup Resources
 
-Clean up Gemini batch resources (files and batch jobs) to prevent quota bloat. This tool addresses file deletion issues that existed in v0.2.1 and earlier versions:
+Clean up Gemini batch resources (files and batch jobs) to prevent quota bloat. This tool addresses file deletion issues that existed in v0.3.1 and earlier versions:
 
 ```bash
 gembatch cleanup
@@ -153,6 +153,6 @@ your-project/
 The `job-info.jsonl` file tracks job status using structured batch objects. For more details, see [batch_info.md](gembatch/batch_info.md):
 
 ```text
-{\"input_file\": \"input1.jsonl\", \"count\": 5, \"batch\": {\"name\": \"batches/...\", \"state\": \"JOB_STATE_PENDING\", \"create_time\": \"2024-01-01T12:00:00+00:00\", \"model\": \"models/gemini-2.5-flash-lite-preview-06-17\"}}
-{\"input_file\": \"input2.jsonl\", \"count\": 3, \"batch\": {\"name\": \"batches/...\", \"state\": \"JOB_STATE_SUCCEEDED\", \"create_time\": \"2024-01-01T12:01:00+00:00\", \"end_time\": \"2024-01-01T12:30:00+00:00\", \"model\": \"models/gemini-2.5-flash-lite-preview-06-17\", \"dest\": {\"file_name\": \"files/batch-...\"}}}
+{\"input_file\": \"input1.jsonl\", \"count\": 5, \"uploaded_file_name\": \"files/...\", \"batch\": {\"name\": \"batches/...\", \"state\": \"JOB_STATE_PENDING\", \"create_time\": \"2024-01-01T12:00:00+00:00\", \"model\": \"models/gemini-2.5-flash-lite-preview-06-17\"}}
+{\"input_file\": \"input2.jsonl\", \"count\": 3, \"uploaded_file_name\": \"files/...\", \"batch\": {\"name\": \"batches/...\", \"state\": \"JOB_STATE_SUCCEEDED\", \"create_time\": \"2024-01-01T12:01:00+00:00\", \"end_time\": \"2024-01-01T12:30:00+00:00\", \"model\": \"models/gemini-2.5-flash-lite-preview-06-17\", \"dest\": {\"file_name\": \"files/batch-...\"}}}
 ```
