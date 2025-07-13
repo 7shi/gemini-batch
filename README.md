@@ -44,7 +44,7 @@ Monitoring can be safely interrupted and resumed:
 ## Requirements
 
 - Python 3.10 or higher
-- Dependencies: `google-genai`, `rich`
+- Dependencies: google-genai, rich
 - Google Gemini API key (Tier 1 or higher)
 
 ```bash
@@ -76,6 +76,20 @@ uv sync
 
 ## Usage
 
+### Basic Workflow
+
+```bash
+# 1. Submit multiple files (job info saved to `job-info.jsonl`)
+gembatch submit batch1.jsonl batch2.jsonl batch3.jsonl
+
+# 2. Monitor progress (live TUI)
+gembatch poll
+
+# 3. Results automatically saved to results/ directory
+ls results/
+# batch1.jsonl  batch2.jsonl  batch3.jsonl
+```
+
 ### Submit Batch Jobs
 
 Submit one or more JSONL files as batch jobs:
@@ -89,7 +103,7 @@ With custom model:
 gembatch submit -m gemini-2.0-flash-thinking-exp file1.jsonl
 ```
 
-With custom job info file:
+Job info is saved to `job-info.jsonl` by default, but you can use a custom file:
 ```bash
 gembatch --job-info my-jobs.jsonl submit *.jsonl
 ```
@@ -121,39 +135,9 @@ your-project/
 
 ## Job Info Format
 
-The `job-info.jsonl` file tracks job status using structured batch objects:
+The `job-info.jsonl` file tracks job status using structured batch objects. For more details, see [batch_info.md](gembatch/batch_info.md):
 
 ```text
 {\"input_file\": \"input1.jsonl\", \"batch\": {\"name\": \"batches/...\", \"state\": \"JOB_STATE_PENDING\", \"create_time\": \"2024-01-01T12:00:00+00:00\", \"model\": \"models/gemini-2.5-flash-lite-preview-06-17\"}}
 {\"input_file\": \"input2.jsonl\", \"batch\": {\"name\": \"batches/...\", \"state\": \"JOB_STATE_SUCCEEDED\", \"create_time\": \"2024-01-01T12:01:00+00:00\", \"end_time\": \"2024-01-01T12:30:00+00:00\", \"model\": \"models/gemini-2.5-flash-lite-preview-06-17\", \"dest\": {\"file_name\": \"files/batch-...\"}}}
-```
-
-## Examples
-
-### Basic Workflow
-
-```bash
-# 1. Submit multiple files
-gembatch submit batch1.jsonl batch2.jsonl batch3.jsonl
-
-# 2. Monitor progress (live TUI)
-gembatch poll
-
-# 3. Results automatically saved to results/ directory
-ls results/
-# batch1.jsonl  batch2.jsonl  batch3.jsonl
-```
-
-### Advanced Usage
-
-```bash
-# Submit with custom model
-gembatch submit -m gemini-2.0-flash-thinking-exp *.jsonl
-
-# Use custom job tracking file
-gembatch --job-info production-jobs.jsonl submit *.jsonl
-gembatch --job-info production-jobs.jsonl poll
-
-# Combine options
-gembatch --job-info custom.jsonl submit -m gemini-2.0-flash *.jsonl
 ```

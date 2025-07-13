@@ -2,21 +2,6 @@
 
 This document explains the `batch_info.py` script, which is designed to retrieve and process Google Gemini batch job information.
 
-## Background
-
-The script was developed based on interactive exploration of the Google Gemini batch API. The development process involved understanding the structure of batch job objects and determining how to convert them to a more usable dictionary format.
-
-## Usage
-
-```bash
-uv run batch_info.py <input_file>
-```
-
-For example:
-```bash
-uv run batch_info.py job-info.jsonl
-```
-
 The script requires:
 - The `GEMINI_API_KEY` environment variable to be set for authentication
 - A required command line argument specifying the input JSONL file path
@@ -77,24 +62,50 @@ Retrieves batch job information using the Gemini client and returns it as a dict
 
 ### `main()`
 
-Main function that:
+For backward compatibility:
 1. Parses command line arguments to get input file path
 2. Initializes the Gemini client
 3. Reads job information from the specified JSONL file
 4. For each job, retrieves detailed batch information
 5. Outputs combined data in JSONL format
 
-## Input Format
+## Backward Compatibility
 
-The script expects a JSONL file with entries like:
+The script was developed based on interactive exploration of the Google Gemini batch API. The development process involved understanding the structure of batch job objects and determining how to convert them to a more usable dictionary format.
 
-```json
-{"input_file": "1-simple/batch_requests.jsonl", "job_name": "batches/...", "uploaded_file_name": "files/...", "display_name": "batch-job-batch_requests", "created_at": "2025-07-13T01:01:38.807581", "completed_at": "2025-07-13T01:03:03.448724", "final_state": "JOB_STATE_SUCCEEDED", "duration_seconds": 84}
+### Usage
+
+For converting from old format (v0.1.0):
+
+```bash
+uv run batch_info.py <input_file>
 ```
 
-## Output Format
+For example:
+```bash
+uv run batch_info.py job-info.jsonl
+```
 
-The script outputs JSONL with the following structure:
+### Input Format
+
+The script expects a JSONL file with entries like (formatted):
+
+```json
+{
+  "input_file": "1-simple/batch_requests.jsonl",
+  "job_name": "batches/...",
+  "uploaded_file_name": "files/...",
+  "display_name": "batch-job-batch_requests",
+  "created_at": "2025-07-13T01:01:38.807581",
+  "completed_at": "2025-07-13T01:03:03.448724",
+  "final_state": "JOB_STATE_SUCCEEDED",
+  "duration_seconds": 84
+}
+```
+
+### Output Format
+
+The script outputs JSONL with the following structure (formatted):
 
 ```json
 {
