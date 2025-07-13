@@ -121,6 +121,21 @@ Monitor specific job file:
 gembatch --job-info my-jobs.jsonl poll
 ```
 
+### Cleanup Resources
+
+Clean up Gemini batch resources (files and batch jobs) to prevent quota bloat. This tool addresses file deletion issues that existed in v0.2.1 and earlier versions:
+
+```bash
+gembatch cleanup
+```
+
+Skip confirmation prompt:
+```bash
+gembatch cleanup -y
+```
+
+**Note**: Currently, the Batch Job List API may not detect existing jobs properly, but this will be addressed in future updates.
+
 ## File Structure
 
 ```
