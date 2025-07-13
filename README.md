@@ -35,9 +35,7 @@ The `poll` command provides a live TUI showing:
 ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
-### Resume Support
-
-Jobs can be safely interrupted and resumed:
+Monitoring can be safely interrupted and resumed:
 
 1. **Submit** jobs: Creates persistent `job-info.jsonl` file
 2. **Interrupt** polling: Ctrl+C safely exits
