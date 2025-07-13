@@ -66,10 +66,11 @@ Counts non-empty lines in a file to determine the number of queries.
 
 ### `convert_job_if_needed(client, job_info)`
 
-Core conversion function that:
+Core conversion function that serves as a backward compatibility trick:
 - Returns `None` if job_info is already in the correct format (has batch field and count)
 - Adds missing count field if batch exists but count is missing/zero
 - Converts legacy format to new format by fetching batch info from API
+- This function enables seamless migration from v0.1.0 format without breaking existing workflows
 
 ### `main()`
 

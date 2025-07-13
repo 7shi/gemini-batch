@@ -61,3 +61,13 @@
 **Problem**: The original cleanup implementation only deleted batch jobs but left uploaded source files (src) in the cloud, discovered when implementing the standalone cleanup functionality that revealed orphaned files accumulating in the system.
 
 **Solution**: Enhanced `cleanup_job_resources` to delete both source files (`batch_job.src.file_name`) and batch jobs, while preserving result files (`batch_job.dest.file_name`) that users have already downloaded. The function now receives the `batch_job` object directly to avoid redundant API calls, since the batch information is already retrieved during status checking. Each deletion operation is wrapped in individual try-catch blocks to ensure cleanup continues even if specific resources fail to delete.
+
+### Backward Compatibility Through Automatic Format Conversion
+**Problem**: As the project evolved, job-info.jsonl files existed in both legacy format (v0.1.0 with job_name field) and new format (with batch field and count). Users needed seamless polling regardless of format without manual conversion steps.
+
+**Solution**: Integrated `convert_job_if_needed` from batch_info module as a backward compatibility trick to automatically detect and convert legacy format entries during file loading. The conversion is performed transparently and the updated file is automatically saved, ensuring all subsequent operations use the consistent new format. This compatibility layer eliminates breaking changes for users with existing legacy format files.
+
+### Code Simplification Through Unnecessary Tracking Removal
+**Problem**: The original implementation tracked line numbers (`_line_num`) for each job record, adding complexity to data handling without providing functional value since the tracking data was only excluded during file writing.
+
+**Solution**: Removed `_line_num` tracking entirely from `load_jobs_from_file` and `write_updated_jobs` functions. This simplification eliminates unnecessary data manipulation and reduces memory overhead without affecting core functionality, as job identification is handled through batch names rather than line positions.

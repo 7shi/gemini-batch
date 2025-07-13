@@ -19,7 +19,7 @@ from rich.align import Align
 from rich.console import Console, Group
 from rich.panel import Panel
 from rich.text import Text
-from gembatch.batch_info import batch_to_dict
+from gembatch.batch_info import batch_to_dict, convert_job_if_needed
 
 POLL_INTERVAL = 30  # Poll every 30 seconds
 
@@ -183,28 +183,37 @@ def create_job_status_display(jobs, last_update, countdown=None):
     return display
 
 
-def load_jobs_from_file(job_info_file):
-    """Load job information from JSONL file"""
+def load_jobs_from_file(job_info_file, client=None):
+    """Load job information from JSONL file and convert if needed"""
     if not os.path.exists(job_info_file):
         print(f"Error: Job info file not found: {job_info_file}", file=sys.stderr)
-        return []
+        return [], False
     
     jobs = []
+    conversion_needed = False
+    
     try:
         with open(job_info_file, 'r', encoding='utf-8') as f:
             for line_num, line in enumerate(f, 1):
                 if line.strip():
                     try:
                         job_record = json.loads(line)
-                        job_record['_line_num'] = line_num  # Record line number
+                        
+                        # Check if conversion is needed
+                        if client:
+                            converted = convert_job_if_needed(client, job_record)
+                            if converted is not None:
+                                job_record = converted
+                                conversion_needed = True
+                        
                         jobs.append(job_record)
                     except json.JSONDecodeError as e:
                         print(f"Warning: JSON parse error at line {line_num}: {e}", file=sys.stderr)
     except Exception as e:
         print(f"Error: Failed to load job info file: {e}", file=sys.stderr)
-        return []
+        return [], False
     
-    return jobs
+    return jobs, conversion_needed
 
 
 def get_pending_jobs(jobs):
@@ -226,9 +235,7 @@ def write_updated_jobs(job_info_file, jobs):
                                        prefix=f"{os.path.basename(job_info_file)}.tmp") as f:
             temp_file = f.name
             for job in jobs:
-                # Exclude _line_num as it's for internal management
-                job_data = {k: v for k, v in job.items() if k != '_line_num'}
-                json.dump(job_data, f, ensure_ascii=False)
+                json.dump(job, f, ensure_ascii=False)
                 f.write('\n')
         
         # Delete original file and rename temp file
@@ -304,11 +311,15 @@ def poll_jobs(job_info_file, client):
     with Live(console=console, auto_refresh=False) as live:
         while True:
             # Load latest job information
-            jobs = load_jobs_from_file(job_info_file)
+            jobs, conversion_needed = load_jobs_from_file(job_info_file, client)
             if not jobs:
                 live.update(Text("Error: No jobs found", style="red bold"))
                 live.refresh()
                 break
+            
+            # Write updated jobs if conversion was needed
+            if conversion_needed:
+                write_updated_jobs(job_info_file, jobs)
             
             # Get incomplete jobs
             pending_jobs = get_pending_jobs(jobs)
@@ -368,7 +379,7 @@ def poll_jobs(job_info_file, client):
                 continue
             
             # Wait if there are still incomplete jobs
-            remaining = len(get_pending_jobs(load_jobs_from_file(job_info_file)))
+            remaining = len(get_pending_jobs(jobs))
             if remaining > 0:
                 # Create display object once
                 display = JobStatusDisplay(jobs, current_time)
