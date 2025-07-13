@@ -54,6 +54,7 @@ class JobStatusDisplay:
         # Build table
         self.table = Table(title="Batch Job Monitor")
         self.table.add_column("Input File", style="cyan")
+        self.table.add_column("Count", style="blue", justify="right")
         self.table.add_column("State", style="magenta")
         self.table.add_column("Create Time", style="dim")
         self.table.add_column("End Time", style="green")
@@ -62,6 +63,7 @@ class JobStatusDisplay:
         completed_count = 0
         for job_index, job in enumerate(self.jobs):
             input_file = job['input_file']
+            count = job.get('count', 0)
             batch = job['batch']
             batch_state = batch.get('state', '')
             
@@ -114,8 +116,12 @@ class JobStatusDisplay:
                 except Exception:
                     duration_display = ""
             
+            # Format count with comma separator
+            count_display = f"{count:,}" if count > 0 else ""
+            
             self.table.add_row(
                 input_file,
+                count_display,
                 Text(status, style=status_style),
                 created_at,
                 completed_at,

@@ -71,3 +71,8 @@
 **Problem**: The original implementation tracked line numbers (`_line_num`) for each job record, adding complexity to data handling without providing functional value since the tracking data was only excluded during file writing.
 
 **Solution**: Removed `_line_num` tracking entirely from `load_jobs_from_file` and `write_updated_jobs` functions. This simplification eliminates unnecessary data manipulation and reduces memory overhead without affecting core functionality, as job identification is handled through batch names rather than line positions.
+
+### Enhanced Progress Display with Query Count Visibility
+**Problem**: When monitoring multiple batch jobs, operators needed to quickly assess the scale of each job (number of queries) to understand processing load and estimate completion times, but this information was not visible in the monitoring interface.
+
+**Solution**: Added Count column to the TUI display showing the number of queries in each input file. The count is displayed with comma separators for readability (e.g., "1,000") and right-aligned for easy visual comparison. This enhancement provides immediate visibility into job scale and helps operators prioritize attention during monitoring.
