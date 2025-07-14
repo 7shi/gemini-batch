@@ -21,14 +21,14 @@ The `poll` command provides a live TUI showing:
 
 ```text
 ╭────────────────────────────────────────── Gemini Batch Job Monitor ───────────────────────────────────────────╮
-│ Last update: 2025-07-13 16:17:38                                                                              │
+│ Last update: 2025-07-13 04:22:35                                                                              │
 │                                                                                                               │
 │                                              Batch Job Monitor                                                │
 │ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓ │
 │ ┃ Input File                       ┃ Count ┃ State   ┃ Create Time         ┃ End Time            ┃ Duration ┃ │
 │ ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩ │
-│ │ examples/basic.jsonl             │     5 │ Success │ 2025-07-13 04:20:32 │ 2025-07-13 04:25:12 │ 4m 39s   │ │
-│ │ examples/structured-output.jsonl │     5 │ Running │ 2025-07-13 04:20:35 │                     │          │ │
+│ │ examples/basic.jsonl             │     5 │ Success │ 2025-07-13 04:20:32 │ 2025-07-13 04:25:12 │  0:04:39 │ │
+│ │ examples/structured-output.jsonl │     5 │ Running │ 2025-07-13 04:20:35 │                     │  0:02:00 │ │
 │ └──────────────────────────────────┴───────┴─────────┴─────────────────────┴─────────────────────┴──────────┘ │
 │                                                                                                               │
 │ Total jobs: 2 | Completed: 1 | Remaining: 1 | Next poll: 5s                                                   │
@@ -153,6 +153,6 @@ your-project/
 The `job-info.jsonl` file tracks job status using structured batch objects. For more details, see [batch_info.md](gembatch/batch_info.md):
 
 ```json
-{"input_file": "input1.jsonl", "count": 5, "uploaded_file_name": "files/...", "batch": {"name": "batches/...", "state": "JOB_STATE_PENDING", "create_time": "2024-01-01T12:00:00+00:00", "model": "models/gemini-2.5-flash-lite-preview-06-17"}}
-{"input_file": "input2.jsonl", "count": 3, "uploaded_file_name": "files/...", "batch": {"name": "batches/...", "state": "JOB_STATE_SUCCEEDED", "create_time": "2024-01-01T12:01:00+00:00", "end_time": "2024-01-01T12:30:00+00:00", "model": "models/gemini-2.5-flash-lite-preview-06-17", "dest": {"file_name": "files/batch-..."}}}
+{"input_file": "examples/basic.jsonl", "count": 5, "uploaded_file_name": "files/...", "batch": {"name": "batches/...", "display_name": "examples/basic.jsonl", "model": "models/gemini-2.5-flash-lite-preview-06-17", "state": "JOB_STATE_SUCCEEDED", "create_time": "2025-07-12T19:20:32.449509+00:00", "update_time": "2025-07-12T19:25:12.229251+00:00", "end_time": "2025-07-12T19:25:12.229251+00:00", "dest": {"file_name": "files/batch-..."}}}
+{"input_file": "examples/structured-output.jsonl", "count": 5, "uploaded_file_name": "files/...", "batch": {"name": "batches/...", "display_name": "examples/structured-output.jsonl", "model": "models/gemini-2.5-flash-lite-preview-06-17", "state": "JOB_STATE_PENDING", "create_time": "2025-07-12T19:20:35.001992+00:00", "update_time": "2025-07-12T19:25:11.084462+00:00"}}
 ```

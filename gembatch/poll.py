@@ -58,7 +58,7 @@ class JobStatusDisplay:
         self.table.add_column("State", style="magenta")
         self.table.add_column("Create Time", style="dim")
         self.table.add_column("End Time", style="green")
-        self.table.add_column("Duration", style="yellow")
+        self.table.add_column("Duration", style="yellow", justify="right")
         
         completed_count = 0
         for job_index, job in enumerate(self.jobs):
@@ -95,24 +95,22 @@ class JobStatusDisplay:
             created_at = to_local_time(create_time)
             completed_at = to_local_time(end_time)
             
-            # Calculate duration from create_time and end_time
+            # Calculate duration from create_time and end_time (or current time)
             duration_display = ""
-            if create_time and end_time:
+            if create_time:
                 try:
                     create_dt = datetime.fromisoformat(create_time.replace('Z', '+00:00'))
-                    end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                    if end_time:
+                        end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                    else:
+                        end_dt = datetime.now(timezone.utc)
                     duration = end_dt - create_dt
                     duration_sec = int(duration.total_seconds())
                     
                     hours = duration_sec // 3600
                     minutes = (duration_sec % 3600) // 60
                     seconds = duration_sec % 60
-                    if hours > 0:
-                        duration_display = f"{hours}h {minutes}m {seconds}s"
-                    elif minutes > 0:
-                        duration_display = f"{minutes}m {seconds}s"
-                    else:
-                        duration_display = f"{seconds}s"
+                    duration_display = f"{hours}:{minutes:02d}:{seconds:02d}"
                 except Exception:
                     duration_display = ""
             

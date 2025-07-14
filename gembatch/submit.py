@@ -70,7 +70,7 @@ def submit_batch_job(input_file, client, existing_jobs, job_info_file, model_id)
             model=model_id,
             src=uploaded_file.name,
             config={
-                "display_name": f"batch-job-{input_path.stem}",
+                "display_name": input_file,
             }
         )
         

@@ -11,10 +11,13 @@ def batch_to_dict(batch_job):
         "display_name": batch_job.display_name,
         "model": batch_job.model,
         "state": batch_job.state.name,
-        "create_time": batch_job.create_time.isoformat() if batch_job.create_time else "",
-        "update_time": batch_job.update_time.isoformat() if batch_job.update_time else "",
-        "end_time": batch_job.end_time.isoformat() if batch_job.end_time else "",
     }
+    if batch_job.create_time is not None:
+        batch_dict["create_time"] = batch_job.create_time.isoformat()
+    if batch_job.update_time is not None:
+        batch_dict["update_time"] = batch_job.update_time.isoformat()
+    if batch_job.end_time is not None:
+        batch_dict["end_time"] = batch_job.end_time.isoformat()
     if batch_job.dest is not None:
         batch_dict["dest"] = {"file_name": batch_job.dest.file_name}
     return batch_dict
