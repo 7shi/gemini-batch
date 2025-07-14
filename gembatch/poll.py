@@ -8,7 +8,6 @@ import json
 import sys
 import time
 import argparse
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from google import genai
@@ -19,7 +18,7 @@ from rich.align import Align
 from rich.console import Console, Group
 from rich.panel import Panel
 from rich.text import Text
-from gembatch.batch_info import batch_to_dict, convert_job_if_needed
+from gembatch.batch_info import batch_to_dict, AtomicJobManager
 
 POLL_INTERVAL = 30  # Poll every 30 seconds
 
@@ -187,39 +186,6 @@ def create_job_status_display(jobs, last_update, countdown=None):
     return display
 
 
-def load_jobs_from_file(job_info_file, client=None):
-    """Load job information from JSONL file and convert if needed"""
-    if not os.path.exists(job_info_file):
-        print(f"Error: Job info file not found: {job_info_file}", file=sys.stderr)
-        return [], False
-    
-    jobs = []
-    conversion_needed = False
-    
-    try:
-        with open(job_info_file, 'r', encoding='utf-8') as f:
-            for line_num, line in enumerate(f, 1):
-                if line.strip():
-                    try:
-                        job_record = json.loads(line)
-                        
-                        # Check if conversion is needed
-                        if client:
-                            converted = convert_job_if_needed(client, job_record)
-                            if converted is not None:
-                                job_record = converted
-                                conversion_needed = True
-                        
-                        jobs.append(job_record)
-                    except json.JSONDecodeError as e:
-                        print(f"Warning: JSON parse error at line {line_num}: {e}", file=sys.stderr)
-    except Exception as e:
-        print(f"Error: Failed to load job info file: {e}", file=sys.stderr)
-        return [], False
-    
-    return jobs, conversion_needed
-
-
 def get_pending_jobs(jobs):
     """Get list of incomplete jobs"""
     pending = []
@@ -228,32 +194,6 @@ def get_pending_jobs(jobs):
         if batch_state not in ['JOB_STATE_SUCCEEDED', 'JOB_STATE_FAILED', 'JOB_STATE_CANCELLED']:
             pending.append(job)
     return pending
-
-
-def write_updated_jobs(job_info_file, jobs):
-    """Write updated jobs to JSONL file"""
-    temp_file = None
-    try:
-        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False, 
-                                       dir=os.path.dirname(job_info_file),
-                                       prefix=f"{os.path.basename(job_info_file)}.tmp") as f:
-            temp_file = f.name
-            for job in jobs:
-                json.dump(job, f, ensure_ascii=False)
-                f.write('\n')
-        
-        # Delete original file and rename temp file
-        os.remove(job_info_file)
-        os.rename(temp_file, job_info_file)
-        
-    except Exception as e:
-        # Delete temp file on error
-        if temp_file and os.path.exists(temp_file):
-            try:
-                os.remove(temp_file)
-            except:
-                pass
-        raise e
 
 
 def cleanup_job_resources(client, job):
@@ -276,7 +216,7 @@ def cleanup_job_resources(client, job):
         pass
 
 
-def download_job_results(client, job, input_file_path):
+def download_job_results(client, job):
     """Download job results"""
     try:
         job_name = job['batch']['name']
@@ -293,7 +233,7 @@ def download_job_results(client, job, input_file_path):
         file_content = file_content_bytes.decode("utf-8")
         
         # Determine download destination (results/ under batch directory)
-        input_path = Path(input_file_path)
+        input_path = Path(job['input_file'])
         results_dir = input_path.parent / "results"
         results_dir.mkdir(exist_ok=True)
         
@@ -314,16 +254,14 @@ def poll_jobs(job_info_file, client):
     """Poll jobs and process completed ones"""
     with Live(console=console, auto_refresh=False) as live:
         while True:
-            # Load latest job information
-            jobs, conversion_needed = load_jobs_from_file(job_info_file, client)
+            # Load latest job information at loop start
+            with AtomicJobManager(job_info_file, client) as manager:
+                jobs = manager.get_all_jobs()
+            
             if not jobs:
                 live.update(Text("Error: No jobs found", style="red bold"))
                 live.refresh()
                 break
-            
-            # Write updated jobs if conversion was needed
-            if conversion_needed:
-                write_updated_jobs(job_info_file, jobs)
             
             # Get incomplete jobs
             pending_jobs = get_pending_jobs(jobs)
@@ -357,22 +295,23 @@ def poll_jobs(job_info_file, client):
                     batch_job = client.batches.get(name=job_name)
                     current_state = batch_job.state.name
                     
-                    # Update job with new batch information immediately
+                    # Update job with new batch information
                     job['batch'] = batch_to_dict(batch_job)
                     
                     if current_state != "JOB_STATE_PENDING":
                         # Job completed (success, failure, or cancellation)
                         if current_state == "JOB_STATE_SUCCEEDED":
                             # Download results
-                            success, message = download_job_results(client, job, job['input_file'])
+                            success, message = download_job_results(client, job)
                             # Download result is for internal processing only
                         
                         # Clean up resources regardless of success/failure
                         cleanup_job_resources(client, job)
-                        
-                        # Write updated job info
-                        write_updated_jobs(job_info_file, jobs)
                         newly_completed += 1
+                        
+                        # Update this specific job immediately when state changes
+                        with AtomicJobManager(job_info_file, client) as manager:
+                            manager.update_job_by_batch_name(job)
                     
                 except Exception as e:
                     # Errors are for internal processing only, don't affect display

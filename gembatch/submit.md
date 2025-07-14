@@ -46,3 +46,13 @@
 **Problem**: Job records needed to include complete information for downstream operations: query count for monitoring displays and source file identifiers for reliable cleanup operations during polling.
 
 **Solution**: Enhanced job record structure to include `count` field (calculated using `count_lines()` from batch_info module) showing the number of queries in each input file, and `uploaded_file_name` field preserving the source file identifier returned by the upload API. This comprehensive recording enables effective monitoring through query count visibility and ensures reliable resource cleanup regardless of API limitations in batch objects.
+
+### Atomic Job Manager Integration for Race Condition Prevention
+**Problem**: Original implementation used direct file append operations that created race conditions when poll processes were running simultaneously, potentially causing data corruption or loss of newly submitted jobs from the job tracking file.
+
+**Solution**: Integrated `AtomicJobManager` from batch_info module to provide thread-safe file operations. The entire submission process now runs under a single atomic context - reading existing jobs, duplicate checking, and saving new jobs all occur within one `AtomicJobManager` session. This approach prevents race conditions with polling operations while ensuring all changes are committed atomically when the submission process completes.
+
+### Code Simplification and Import Optimization
+**Problem**: Legacy code contained unused imports (`os`, `json`, `datetime`) and redundant functions (`load_existing_jobs`, `save_job_record`) that added complexity without providing functional value after the atomic manager integration.
+
+**Solution**: Removed all unused imports and obsolete functions, replacing them with direct `AtomicJobManager` usage. Simplified the codebase by eliminating redundant file operations and focusing on the essential submission logic. The `submit_batch_job` function now receives the manager instance directly, eliminating per-file lock acquisition and improving efficiency while maintaining clean, focused code.

@@ -2,62 +2,32 @@
 """
 Submit JSONL files as Gemini batch jobs
 """
-
-import os
-import json
 import sys
 import argparse
-from datetime import datetime
 from pathlib import Path
 from google import genai
 from google.genai import types
-from gembatch.batch_info import batch_to_dict, count_lines
+from gembatch.batch_info import batch_to_dict, count_lines, AtomicJobManager
 
 
-def load_existing_jobs(job_info_file):
-    """Load existing job information from JSONL file"""
-    if not os.path.exists(job_info_file):
-        return {}
-    
-    jobs = {}
-    try:
-        with open(job_info_file, 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip():
-                    job_record = json.loads(line)
-                    jobs[job_record['input_file']] = job_record
-    except Exception as e:
-        print(f"Warning: Failed to load job info file: {e}", file=sys.stderr)
-    
-    return jobs
-
-
-def save_job_record(job_record, job_info_file):
-    """Append job record to JSONL file"""
-    with open(job_info_file, 'a', encoding='utf-8') as f:
-        json.dump(job_record, f, ensure_ascii=False)
-        f.write('\n')
-
-
-def submit_batch_job(input_file, client, existing_jobs, job_info_file, model_id):
+def submit_batch_job(input_file, client, manager, model_id):
     """Submit a single file as a batch job"""
-    input_path = Path(input_file)
-    
-    if not input_path.exists():
+    # Check if file exists
+    if not manager.file_exists(input_file):
         print(f"Error: Input file not found: {input_file}", file=sys.stderr)
         return False
     
     # Check if job already exists
-    if input_file in existing_jobs:
-        job_record = existing_jobs[input_file]
-        batch_name = job_record['batch']['name']
+    existing_job = manager.find_job_by_input_file(input_file)
+    if existing_job:
+        batch_name = existing_job['batch']['name']
         print(f"Skip: {input_file} already submitted (job: {batch_name})")
         return True
     
     print(f"Uploading file: {input_file}")
     try:
         uploaded_file = client.files.upload(
-            file=str(input_path),
+            file=str(Path(input_file)),
             config=types.UploadFileConfig(
                 display_name=input_file,
                 mime_type="jsonl"
@@ -84,8 +54,10 @@ def submit_batch_job(input_file, client, existing_jobs, job_info_file, model_id)
             "batch": batch_to_dict(batch_job)
         }
         
-        save_job_record(job_record, job_info_file)
-        print(f"Job info saved: {job_info_file}")
+        # Add job to manager (atomically saved on context exit)
+        success = manager.add_job(job_record)
+        if success:
+            print(f"Job info will be saved")
         
         return True
         
@@ -107,20 +79,22 @@ def submit_batch_job(input_file, client, existing_jobs, job_info_file, model_id)
 def main_with_args(args, client):
     """Main function that accepts parsed arguments and initialized client"""
     
-    # Load existing job information
-    existing_jobs = load_existing_jobs(args.job_info)
-    print(f"Existing jobs: {len(existing_jobs)}")
-    
-    # Process each file
-    success_count = 0
-    total_count = len(args.input_files)
-    
-    for input_file in args.input_files:
-        print(f"\n[{success_count + 1}/{total_count}] Processing: {input_file}")
-        if submit_batch_job(input_file, client, existing_jobs, args.job_info, args.model):
-            success_count += 1
-    
-    print(f"\nCompleted: {success_count}/{total_count} jobs submitted")
-    
+    # Process all files under a single lock to prevent race conditions
+    with AtomicJobManager(args.job_info, client) as manager:
+        existing_count = len(manager.get_all_jobs())
+        print(f"Existing jobs: {existing_count}")
+        
+        # Process each file
+        success_count = 0
+        total_count = len(args.input_files)
+        
+        for input_file in args.input_files:
+            print(f"\n[{success_count + 1}/{total_count}] Processing: {input_file}")
+            if submit_batch_job(input_file, client, manager, args.model):
+                success_count += 1
+        
+        print(f"\nCompleted: {success_count}/{total_count} jobs submitted")
+        # All changes will be saved atomically when exiting this context
+        
     if success_count < total_count:
         sys.exit(1)

@@ -12,10 +12,10 @@
 
 **Solution**: Implemented mechanism to read each line of job-info.jsonl individually and determine completion status by `batch.state` field in the structured batch object, supporting concurrent management of multiple jobs.
 
-### Safe JSONL File Update Functionality
-**Problem**: Directly updating job-info.jsonl upon job completion risks file corruption due to interruption or exceptions during writing, with concerns about race conditions during concurrent execution.
+### Safe JSONL File Update with Atomic Operations
+**Problem**: Directly updating job-info.jsonl upon job completion risks file corruption due to interruption or exceptions during writing, with severe race conditions occurring when submit and poll processes access the same file simultaneously, causing data loss.
 
-**Solution**: Implemented atomic operation of write to temporary file → delete original file → rename using `tempfile.NamedTemporaryFile` for safe update processing, preventing file corruption.
+**Solution**: Adopted `AtomicJobManager` from batch_info module for thread-safe file operations. Uses exclusive temporary file creation (`{filename}.tmp`) as an atomic lock mechanism that works across Windows and Unix systems. Each job state change is immediately written using localized atomic operations, minimizing lock time while ensuring complete data consistency.
 
 ### Systematic Result File Storage
 **Problem**: A systematic approach for saving each job's result files to appropriate locations was needed, while avoiding filename conflicts and location confusion.
@@ -81,3 +81,13 @@
 **Problem**: Batch objects returned by the Gemini API don't contain source file information (src field is not available), making it impossible to clean up uploaded source files during job completion, leading to orphaned files accumulating in the system.
 
 **Solution**: Modified submit process to store `uploaded_file_name` field in job records during submission, preserving the source file identifier for later cleanup operations. Updated `cleanup_job_resources` function to accept complete job objects and use the stored `uploaded_file_name` for source file deletion. This approach ensures reliable cleanup regardless of API limitations while maintaining backward compatibility through the `convert_job_if_needed` function that preserves existing `uploaded_file_name` fields during format conversion.
+
+### Atomic Job Manager Integration for Race Condition Prevention
+**Problem**: The original implementation suffered from race conditions where poll.py would read job information, submit.py would append new jobs, and poll.py would overwrite the file with outdated information, causing newly submitted jobs to disappear from the job tracking file.
+
+**Solution**: Integrated `AtomicJobManager` from batch_info module to provide thread-safe file operations. The polling loop now uses localized atomic operations: job reading at loop start and immediate individual job updates when state changes occur. This approach minimizes lock time while preventing race conditions. Each `AtomicJobManager` context is kept as short as possible - file reading occurs once per polling cycle, and job state updates happen immediately when jobs complete, ensuring submit operations are never blocked for extended periods.
+
+### Function Simplification and API Consistency  
+**Problem**: Legacy functions like `load_jobs_from_file` and `write_updated_jobs` used different patterns and maintained redundant wrapper functions that added complexity without providing functional value.
+
+**Solution**: Replaced legacy file operations with direct `AtomicJobManager` usage throughout the codebase. Simplified function signatures by removing redundant parameters - `download_job_results` now takes only job object since `input_file` is available within it. Removed unused imports (`tempfile`, `convert_job_if_needed`) and obsolete functions to maintain clean, focused code that follows consistent patterns across the module.
