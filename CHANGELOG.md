@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.3] - 2025-07-14
 
 ### Added
-- AtomicJobManager for race condition prevention during concurrent job operations
+- `AtomicJobManager` for race condition prevention during concurrent job operations
 
 ### Improved
 - Poll duration display formatting and timestamp handling for better user experience
